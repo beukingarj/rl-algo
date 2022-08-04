@@ -1,47 +1,42 @@
 #%%
-from stable_baselines3.common.vec_env import DummyVecEnv
-from stable_baselines3.common.callbacks import CallbackList, EvalCallback, CheckpointCallback
-from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.vec_env import VecMonitor, VecNormalize
-from stable_baselines3 import A2C, DQN, TD3
-from stable_baselines3.common.sb2_compat.rmsprop_tf_like import RMSpropTFLike
-from stable_baselines3.common import results_plotter
-from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_results, plot_curves
-from stable_baselines3.common.noise import NormalActionNoise
-from stable_baselines3.common.callbacks import BaseCallback
-# from stable_baselines3.common.evaluation import evaluate_policy
-
+from extract_data import extract_data
+from train_and_evaluate import train_and_evaluate
 import torch as th
-import tensorflow as tf
-import torch.nn as nn
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
-
 import numpy as np
-import gym
-import os
-from gym import spaces
-from gym.utils import seeding
-import matplotlib.pyplot as plt
-from dateutil.relativedelta import relativedelta
-import skimage
-import time
-from os.path import exists
-from IPython import display
 
-from ta import add_all_ta_features
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.decomposition import PCA
-from sklearn.pipeline import Pipeline
-from skimage.measure import label
-import pandas as pd
-
-import datetime
 
 #%%
 %load_ext autoreload
 %autoreload 2
 
-from extract_data import extract_data
+
 data = extract_data()
 data.extract_stock_data()
-data.stock_data
+data.extract_features()
+data.split_and_scale()
+
+#%%
+%load_ext autoreload
+%autoreload 2
+
+
+# data = 1
+a = train_and_evaluate(data, 'A2C')
+# print(a.evaluate(dataset='train', verbose=0)[0])
+
+for i in np.logspace(-3,-6,4):
+    kwargs = dict(
+        learning_rate = i,
+        policy_kwargs = dict(
+                            activation_fn=th.nn.LeakyReLU,
+                            net_arch = [256, dict(vf=[256], pi=[256])],
+                            optimizer_class=th.optim.RMSprop,
+                            ),
+        
+        ent_coef = 0.8,
+        create_eval_env = True,
+        # n_steps = 5,
+        # train_freq = (4, "step")
+        )
+
+model = a.train(total_timesteps=100000 , cont=False, **kwargs)

@@ -1,15 +1,10 @@
 import os
+from os.path import exists
 from stable_baselines3.common.vec_env import DummyVecEnv
-from stable_baselines3.common.callbacks import CallbackList, EvalCallback, CheckpointCallback
-from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import VecMonitor, VecNormalize
 from stable_baselines3 import A2C, DQN, TD3
-from stable_baselines3.common.sb2_compat.rmsprop_tf_like import RMSpropTFLike
-from stable_baselines3.common import results_plotter
-from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_results, plot_curves
-from stable_baselines3.common.noise import NormalActionNoise
-from stable_baselines3.common.callbacks import BaseCallback
 from trading_env import TradingEnv
+from SaveOnBestTrainingRewardCallback import SaveOnBestTrainingRewardCallback
 
 class train_and_evaluate():
     def __init__(self, data, model_type):
@@ -19,6 +14,8 @@ class train_and_evaluate():
         if self.log_dir is not None:
             os.makedirs(self.log_dir, exist_ok=True)
 
+        
+
         self.env_train = TradingEnv(X=data.X_train, y=data.y_train)
         self.DummyEnv_train = DummyVecEnv([lambda: self.env_train])
         self.env_train_norm = VecMonitor(VecNormalize(self.DummyEnv_train, norm_obs=True, norm_reward=False, clip_obs=10.))
@@ -26,7 +23,8 @@ class train_and_evaluate():
         self.DummyEnv_val = DummyVecEnv([lambda: self.env_val])
 
     def load_best_model(self, **kwargs):
-        if exists(self.log_dir+'/best_model.zip'):
+        
+        if exists(os.path.join(self.log_dir, 'best_model.zip')):
             self.env_train_norm = VecMonitor(VecNormalize.load(self.log_dir+'/best_env', self.DummyEnv_train))
             self.env_val_norm = VecMonitor(VecNormalize.load(self.log_dir+'/best_env', self.DummyEnv_val))
             model = globals()[self.model_type].load(self.log_dir+'/best_model.zip', **kwargs)

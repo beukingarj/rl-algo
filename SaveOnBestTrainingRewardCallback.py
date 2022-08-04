@@ -1,8 +1,12 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from os.path import exists
+from stable_baselines3 import A2C, DQN, TD3
 from stable_baselines3.common.vec_env import VecMonitor, VecNormalize
 from stable_baselines3.common.callbacks import BaseCallback
+from evaluate_policy import evaluate_policy
+from IPython import display
 
 class SaveOnBestTrainingRewardCallback(BaseCallback):
     """
@@ -29,6 +33,10 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
     def _init_callback(self) -> None:
         if exists(self.best_model_path) and exists(self.best_env_path):
             model = A2C.load(self.best_model_path)
+
+            env_train = TradingEnv(X=data.X_train, y=data.y_train)
+            DummyEnv_train = DummyVecEnv([lambda: env_train])
+            
             env_train = VecMonitor(VecNormalize.load(self.best_env_path, a.DummyEnv_train))
             env_val = VecMonitor(VecNormalize.load(self.best_env_path, a.DummyEnv_val))
             env_train.training = False

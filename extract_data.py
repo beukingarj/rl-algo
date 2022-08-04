@@ -24,36 +24,27 @@ class extract_data():
             symbols = symbols[:no_stocks]
         
         stock_data_temp1 = yf.download(symbols, start=str(datetime.date.today()+datetime.timedelta(days=-delta)), interval = interval, group_by='ticker')
-        
+        if len(symbols)==1:
+            stock_data_temp1.columns = pd.MultiIndex.from_product([symbols, stock_data_temp1.columns])
+        self.symbols = np.array(stock_data_temp1.columns.get_level_values(0).unique())
+        stock_data_temp1 = stock_data_temp1.swaplevel(axis=1)
+
         valid_days = ~np.all(np.isnan(stock_data_temp1),axis=1)
         stock_data_temp1 = stock_data_temp1.loc[valid_days,:]
 
-        self.test = stock_data_temp1
-        
-        if len(symbols)==1:
-            stock_data_temp1.columns = pd.MultiIndex.from_product([stock_data_temp1.columns, symbols])
+        stock_data_temp1 = stock_data_temp1.loc[:,(['Open','High','Low','Close','Volume'])]
 
-        self.symbols = symbols
-        # self.symbols = list([])
-        # for i, symbol in enumerate(symbols):
-        #     if ~np.any(np.all(np.isnan(stock_data_temp1.loc[:,(slice(None),symbol)]),1)):
-        #         self.symbols.append(symbol)
-        self.symbols = np.array(self.symbols)
-
-        stock_data_temp1 = stock_data_temp1.loc[:,(['Open','High','Low','Close','Volume'],self.symbols)]
-
-        idx_zero_i = np.where(stock_data_temp1['Volume']==0)[0]
-        idx_zero_j = np.where(stock_data_temp1['Volume']==0)[1]
+        idx_zero_i, idx_zero_j = np.where(stock_data_temp1.Volume==0)
         for i in range(len(idx_zero_i)):
-            stock_data_temp1['Volume'].iloc[idx_zero_i[i], idx_zero_j[i]] = np.nan
-        stock_data_temp1.loc[:,'Volume'].interpolate(inplace=True)
-
+            stock_data_temp1.Volume.iloc[idx_zero_i[i], idx_zero_j[i]] = np.nan
+        stock_data_temp1.Volume.interpolate(inplace=True)
         self.stock_data = stock_data_temp1.swaplevel(axis=1)
 
     def extract_features(self):
         for i, symbol in enumerate(self.symbols):
             df_temp = self.stock_data.loc[:,symbol]
-            df_temp = df_temp[~np.all(np.isnan(df_temp),1)]
+            # df_temp = df_temp[~np.all(np.isnan(df_temp),1)]
+            df_temp.dropna(axis=0, inplace=True)
             self.add_features(df_temp)
 
             if i==0:
