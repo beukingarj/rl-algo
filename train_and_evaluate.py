@@ -14,13 +14,12 @@ class train_and_evaluate():
         if self.log_dir is not None:
             os.makedirs(self.log_dir, exist_ok=True)
 
-        
-
         self.env_train = TradingEnv(X=data.X_train, y=data.y_train)
         self.DummyEnv_train = DummyVecEnv([lambda: self.env_train])
         self.env_train_norm = VecMonitor(VecNormalize(self.DummyEnv_train, norm_obs=True, norm_reward=False, clip_obs=10.))
         self.env_val = TradingEnv(X=data.X_val, y=data.y_val)
         self.DummyEnv_val = DummyVecEnv([lambda: self.env_val])
+        self.data = data
 
     def load_best_model(self, **kwargs):
         
@@ -48,7 +47,7 @@ class train_and_evaluate():
         #     n_eval_episodes=1,
         #     deterministic=True)
 
-        callback = SaveOnBestTrainingRewardCallback(check_freq=500, log_dir=self.log_dir)
+        callback = SaveOnBestTrainingRewardCallback(check_freq=500, log_dir=self.log_dir, DummyEnv_train=self.DummyEnv_train, DummyEnv_val=self.DummyEnv_val, data=self.data)
         model.learn(total_timesteps=total_timesteps, callback=callback)
 
         return model

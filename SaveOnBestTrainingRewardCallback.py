@@ -18,27 +18,26 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
       It must contains the file created by the ``Monitor`` wrapper.
     :param verbose: Verbosity level.
     """
-    def __init__(self, check_freq: int, log_dir: str, verbose: int = 1):
+    def __init__(self, check_freq: int, log_dir: str, DummyEnv_train, DummyEnv_val, data, verbose: int = 1):
         super(SaveOnBestTrainingRewardCallback, self).__init__(verbose)
         self.check_freq = check_freq
         self.log_dir = log_dir
+        self.DummyEnv_train = DummyEnv_train
+        self.DummyEnv_val = DummyEnv_val
+        self.data = data
         self.best_model_path = os.path.join(log_dir, 'best_model.zip')
         self.best_env_path = os.path.join(log_dir, 'best_env')
         self.best_mean_reward = -np.inf
         self.reward_train_list = list()
         self.reward_val_list = list()
         self.num_timesteps_list = list()
-        
 
     def _init_callback(self) -> None:
         if exists(self.best_model_path) and exists(self.best_env_path):
             model = A2C.load(self.best_model_path)
 
-            env_train = TradingEnv(X=data.X_train, y=data.y_train)
-            DummyEnv_train = DummyVecEnv([lambda: env_train])
-            
-            env_train = VecMonitor(VecNormalize.load(self.best_env_path, a.DummyEnv_train))
-            env_val = VecMonitor(VecNormalize.load(self.best_env_path, a.DummyEnv_val))
+            env_train = VecMonitor(VecNormalize.load(self.best_env_path, self.DummyEnv_train))
+            env_val = VecMonitor(VecNormalize.load(self.best_env_path, self.DummyEnv_val))
             env_train.training = False
             env_val.training = False
             env_train.norm_reward = False
@@ -68,14 +67,14 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
           self.model.save(os.path.join(self.log_dir, 'best_model_{}'.format(self.num_timesteps)))
           self.model.env.save(os.path.join(self.log_dir, 'best_env_{}'.format(self.num_timesteps)))
 
-          env_val = VecMonitor(VecNormalize.load(os.path.join(self.log_dir, 'best_env_{}'.format(self.num_timesteps)), a.DummyEnv_val))
+          env_val = VecMonitor(VecNormalize.load(os.path.join(self.log_dir, 'best_env_{}'.format(self.num_timesteps)), self.DummyEnv_val))
           self.model.env.training = False
           env_val.training = False
           self.model.env.norm_reward = False
           env_val.norm_reward = False
 
-          reward_train = evaluate_policy(self.model, self.model.env, n_eval_episodes=1, deterministic=True)[0]/data.X_train.shape[0]
-          reward_val = evaluate_policy(self.model, env_val, n_eval_episodes=1, deterministic=True)[0]/data.X_val.shape[0]
+          reward_train = evaluate_policy(self.model, self.model.env, n_eval_episodes=1, deterministic=True)[0]/self.data.X_train.shape[0]
+          reward_val = evaluate_policy(self.model, env_val, n_eval_episodes=1, deterministic=True)[0]/self.data.X_val.shape[0]
 
           self.model.env.training = True
           self.model.env.norm_reward = True
