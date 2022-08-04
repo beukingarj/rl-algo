@@ -1,0 +1,7 @@
+ipykernel
+stable-baselines3
+ta
+yfinance  
+sklearn
+scikit-image
+#tensorflow-gpu==1.15.0 tensorflow==1.15.0  gym==0.15.7 scikit-image
