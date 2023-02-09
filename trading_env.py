@@ -1,3 +1,4 @@
+#%%
 import gym
 from gym import spaces
 from gym.utils import seeding
@@ -28,23 +29,23 @@ class TradingEnv(gym.Env):
         # spaces
         # self.action_space = spaces.Box(low = -1, high = 1,shape = (1,), dtype=np.float32) 
         self.action_space = spaces.Discrete(2)
-        self.observation_space = spaces.Box(low=-2, high=2, shape=(self.no_features,))
+        self.observation_space = spaces.Box(low=0, high=1, shape=(self.no_features,))
 
         # episode
         # if self.train==False:
-        self._start_tick = -1
-        self._end_tick = self.date_len - 2
-        self._done = None
-        self._current_tick = None
-        self._last_trade_price = None
-        self._shares_history = None
-        self._total_reward = None
+        self.start_tick = -1
+        self.end_tick = self.date_len - 2
+        self.done = None
+        self.current_tick = None
+        self.last_trade_price = None
+        self.shares_history = None
+        self.total_reward = None
         self._total_profit = None
-        self._first_rendering = None
+        self.first_rendering = None
         self.history = None
         self.balance = None
         self.start_balance = float(10000) #np.array([10000],dtype=np.float64)
-        self._balance_history = None
+        self.balance_history = None
         self.transcosts = None
         
     def seed(self, seed=None):
@@ -58,99 +59,98 @@ class TradingEnv(gym.Env):
         # print("selection: ",selection)
         # self.signal_features = self.X[[np.random.choice(self.stocks_symbols),'VIX']]
         self.prices = self.y
-        self.signal_features = self.X
-
-        self._done = False
-        self._current_tick = self._start_tick
+        self.done = False
+        self.current_tick = self.start_tick
         self.update_time()
         self.start = True
 
-        self._last_trade_price = np.zeros(1)
+        self.last_trade_price = np.zeros(1)
         self.shares = float(0)
         # self._position_history = (self.window_size * [None]) + [self.shares]
         # self._position_history = np.concatenate([np.nan*np.ones([self.window_size,self.no_stocks]), self.shares[np.newaxis,...]])
-        self._shares_history = list() #self.shares[np.newaxis,...]
-        self._total_reward = 0
+        self.shares_history = list() #self.shares[np.newaxis,...]
+        self.total_reward = 0
         self.kas = self.start_balance #.copy()
         self.balance = self.start_balance #.copy()
         self.transcosts = float(0.5)
         # self._total_profit = 10000  # unit
-        # self._balance_history = (self.window_size * [None]) + [self.balance]
-        self._balance_history = [self.balance]
+        # self.balance_history = (self.window_size * [None]) + [self.balance]
+        self.balance_history = [self.balance]
         self.step_reward = float(0)
         self.action_list = list()
         
-        self._first_rendering = True
+        self.first_rendering = True
         self.history = {}
-        
-        return self._get_observation()
+    
+        return self.get_observation()
 
     def update_time(self):
-        # self._prev_price = self.prices.loc[self._current_time, :]
-        self._current_tick += 1
-        self._current_time = self.dates[self._current_tick]
-        self._current_price = float(self.prices.loc[self._current_time, :])
-        self._next_price = float(self.prices.loc[self.dates[self._current_tick+1], :])
+        self.current_tick += 1
+        self.current_time = self.dates[self.current_tick]
+        self.current_price = float(self.prices.loc[self.current_time, :])
+        self.next_price = float(self.prices.loc[self.dates[self.current_tick+1], :])
 
-    def step(self, action):
-        self.action_list.append(action)
-        
+    def step(self, action):       
         if self.start == False:
             self.update_time()
-
-        if self._current_tick == self._end_tick:
-            self._done = True
+        
+        if self.current_tick == self.end_tick:
+            self.done = True
             action = 0
         
-        self._calculate_reward(action)
+        self.perform_action(action)
         
-        self._shares_history.append(self.shares)
-        self._balance_history.append(self.balance)
-        observation = self._get_observation()
+        observation = self.get_observation()
+        
+        
         info = dict(
-            date = self._current_time.strftime('%Y-%m-%d'),
+            date = self.current_time.strftime('%Y-%m-%d'),
             actions = action,
-            price = int(self._current_price),
-            total_reward = float(np.round(self._total_reward,2)),
+            price = int(self.current_price),
+            total_reward = float(np.round(self.total_reward,2)),
             step_reward = float(np.round(self.step_reward,2)),
             kas = int(self.kas),
             balance = int(self.balance),
             shares = float(np.round(self.shares,2)),
         )
         # print(info)
-        self._update_history(info)
+        self.update_history(info)
 
         self.start = False
 
-        return observation, self.step_reward, self._done, info
+        return observation, self.step_reward, self.done, info
 
 
-    def _get_observation(self):
-        # a = self.signal_features[(self._current_tick-self.window_size):self._current_tick,:]
+    def get_observation(self):
+        # a = self.signal_features[(self.current_tick-self.window_size):self.current_tick,:]
 
-        # a = self.balance / self._current_price
-        # b = self._current_price
+        # a = self.balance / self.current_price
+        # b = self.current_price
         # c = self.shares
-        d = np.array(self.signal_features.loc[self._current_time,:],dtype="float32")
+        d = np.array(self.X.loc[self.current_time,:],dtype="float32")
         # e = np.concatenate([a,b,c,d])
         return d
 
-    def _calculate_reward(self, action):
-        self.balance = self.kas + self._current_price * self.shares
-        self.virt_shares = (self.balance - self.transcosts) / self._current_price
+    def perform_action(self, action):
+        self.action_list.append(action)
+        self.balance = self.kas + self.current_price * self.shares
+        self.virt_shares = (self.balance - self.transcosts) / self.current_price
 
         if action==0 and self.shares>0:
-            self.kas += float((self._current_price * self.shares) - self.transcosts)
+            self.kas += float((self.current_price * self.shares) - self.transcosts)
             self.shares = float(0)
         
         if action==1 and self.kas>0:
+            self.shares = self.virt_shares
             self.virt_shares = float(0)
             self.kas = float(0)
-            self.shares = (self.balance - self.transcosts) / self._current_price
             
-        self.update_profit(action)
+        self.shares_history.append(self.shares)
+        self.balance_history.append(self.balance)
 
-    def update_profit(self, action):
+        self.calculate_reward(action)
+
+    def calculate_reward(self, action):
         
         b = skimage.measure.label(np.array(self.action_list)+1, connectivity=1)
         x = np.sum(b==b[-1])
@@ -160,22 +160,22 @@ class TradingEnv(gym.Env):
         # gamma = 0
         
         if action==1:
-            next_balance = self._next_price * self.shares
+            next_balance = self.next_price * self.shares
             self.step_reward = beta * (next_balance - self.balance) / self.balance + gamma
 
         elif action==0:
-            next_balance = self._next_price * self.virt_shares
+            next_balance = self.next_price * self.virt_shares
             self.step_reward = - beta * (next_balance - self.balance) / self.balance + gamma
 
-        # if self._done == True:
+        # if self.done == True:
         #     if np.mean(self.action_list)==0 or np.mean(self.action_list)==1:
         #         self.step_reward = -1e6
         
         # self.step_reward /= float(abs(self.prices.diff()).sum())
         # self.step_reward *= 10000
-        self._total_reward += self.step_reward      
+        self.total_reward += self.step_reward      
 
-    def _update_history(self, info):
+    def update_history(self, info):
         if not self.history:
             self.history = {key: [] for key in info.keys()}
 
@@ -196,8 +196,8 @@ class TradingEnv(gym.Env):
 
         plt.figure(figsize=[10,10])
         
-        print("Relative reward against weighted prices: {:.1f}%".format((self._balance_history[-1]/eind_weighted*100-100)))
-        plt.plot(self._balance_history,'b')
+        print("Relative reward against weighted prices: {:.1f}%".format((self.balance_history[-1]/eind_weighted*100-100)))
+        plt.plot(self.balance_history,'b')
         plt.plot(np.sum(((self.start_balance)/self.prices.iloc[0,:])*self.prices[:-1],1).values,'r')
         # for i in range(self.no_stocks):
         #     plt.plot((self.start_balance/self.prices.iloc[0,i]*self.prices.iloc[:,i]).values)

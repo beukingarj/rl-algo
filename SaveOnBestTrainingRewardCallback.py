@@ -1,3 +1,4 @@
+#%%
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,7 +19,7 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
       It must contains the file created by the ``Monitor`` wrapper.
     :param verbose: Verbosity level.
     """
-    def __init__(self, check_freq: int, log_dir: str, DummyEnv_train, DummyEnv_val, data, verbose: int = 1):
+    def __init__(self, check_freq: int, log_dir: str, DummyEnv_train, DummyEnv_val, data, verbose: int = 1): 
         super(SaveOnBestTrainingRewardCallback, self).__init__(verbose)
         self.check_freq = check_freq
         self.log_dir = log_dir
@@ -31,10 +32,13 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         self.reward_train_list = list()
         self.reward_val_list = list()
         self.num_timesteps_list = list()
+        print("asd")
 
     def _init_callback(self) -> None:
         if exists(self.best_model_path) and exists(self.best_env_path):
             model = A2C.load(self.best_model_path)
+
+            print('1')
 
             env_train = VecMonitor(VecNormalize.load(self.best_env_path, self.DummyEnv_train))
             env_val = VecMonitor(VecNormalize.load(self.best_env_path, self.DummyEnv_val))
@@ -42,8 +46,8 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
             env_val.training = False
             env_train.norm_reward = False
             env_val.norm_reward = False
-            self.total_reward_val_comp = evaluate_policy(model, env_val, n_eval_episodes=1, deterministic=True)[0]/data.X_val.shape[0]
-            self.total_reward_train_comp = evaluate_policy(model, env_train, n_eval_episodes=1, deterministic=True)[0]/data.X_train.shape[0]
+            self.total_reward_val_comp = evaluate_policy(model, env_val, n_eval_episodes=1, deterministic=True)[0]/self.data.X_val.shape[0]
+            self.total_reward_train_comp = evaluate_policy(model, env_train, n_eval_episodes=1, deterministic=True)[0]/self.data.X_train.shape[0]
             # self.total_reward_comp, _ = a.evaluate(dataset='train', verbose=0)
 
             self.reward_train_list.append(float(self.total_reward_train_comp))

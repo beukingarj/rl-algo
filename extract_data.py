@@ -6,26 +6,33 @@ import numpy as np
 from ta import add_all_ta_features
 
 class extract_data():
-    def __init__(self, df=None):
-        # self.extract_stock_data(no_stocks=3, delta=365*4,interval='1d') #640
+    def __init__(self, symbols, interval, delta, no_stocks, df=None):
+
+        self.symbols = symbols
+        self.interval = interval
+        self.delta = delta
+        self.no_stocks = no_stocks
+
+        
+        # self.extract_stock_data(symbols=symbols, interval=interval, delta=delta, no_stocks=no_stocks) #640
         # self.extract_features()
         # self.split_and_scale()
         pass
 
-    def extract_stock_data(self, symbols=None, interval='1d', delta = 365*6, no_stocks=100):
-        if symbols == None:
+    def extract_stock_data(self):
+        # if symbols == None:
             # table = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')
             # symbols = list(np.sort(table[0].Symbol))
             # symbols.remove('AMCR')
             # symbols.remove('BF.B')
             # symbols.remove('BRK.B')  
             
-            symbols = list(['BTC-EUR', 'SOL-EUR', 'NVDA']) # , 'AVAX-EUR''ETH-EUR', 'USDT-EUR', 'BNB-EUR', 'USDC-EUR', 'XRP-EUR', 'SOL-EUR', 'ADA-EUR'
-            symbols = symbols[:no_stocks]
+            # symbols = list(['BTC-EUR', 'SOL-EUR', 'NVDA']) # , 'AVAX-EUR''ETH-EUR', 'USDT-EUR', 'BNB-EUR', 'USDC-EUR', 'XRP-EUR', 'SOL-EUR', 'ADA-EUR'
+            # symbols = symbols[:no_stocks]
         
-        stock_data_temp1 = yf.download(symbols, start=str(datetime.date.today()+datetime.timedelta(days=-delta)), interval = interval, group_by='ticker')
-        if len(symbols)==1:
-            stock_data_temp1.columns = pd.MultiIndex.from_product([symbols, stock_data_temp1.columns])
+        stock_data_temp1 = yf.download(self.symbols, start=str(datetime.date.today()+datetime.timedelta(days=-self.delta)), interval = self.interval, group_by='ticker')
+        if len(self.symbols)==1:
+            stock_data_temp1.columns = pd.MultiIndex.from_product([self.symbols, stock_data_temp1.columns])
         self.symbols = np.array(stock_data_temp1.columns.get_level_values(0).unique())
         stock_data_temp1 = stock_data_temp1.swaplevel(axis=1)
 
@@ -39,6 +46,18 @@ class extract_data():
             stock_data_temp1.Volume.iloc[idx_zero_i[i], idx_zero_j[i]] = np.nan
         stock_data_temp1.Volume.interpolate(inplace=True)
         self.stock_data = stock_data_temp1.swaplevel(axis=1)
+
+    def extract_features_new(self):
+        def scaling(x):
+            x1 = (x-np.min(x))/(np.max(x)-np.min(x))
+            return x1
+
+        self.df = self.stock_data.copy()
+        for i, symbol in enumerate(self.symbols):
+            x = self.stock_data.loc[:,(symbol,['Open','High','Low','Close'])]
+            self.df.loc[:,(symbol,['Open','High','Low','Close'])] = scaling(x)
+            x = self.stock_data.loc[:,(symbol,['Volume'])]
+            self.df.loc[:,(symbol,['Volume'])] = scaling(x)
 
     def extract_features(self):
         for i, symbol in enumerate(self.symbols):
@@ -86,25 +105,29 @@ class extract_data():
 
     def split_and_scale(self):
 
-        self.train = self.df.loc[:,(['BTC-EUR'],slice(None))]
-        self.val = self.df.loc[:,('SOL-EUR',slice(None))]
-        self.test = self.df.loc[:,('NVDA',slice(None))]
+        # self.train = self.df.loc[:,(['BTC-EUR'],slice(None))]
+        # self.val = self.df.loc[:,('SOL-EUR',slice(None))]
+        # self.test = self.df.loc[:,('NVDA',slice(None))]
 
-        self.train.dropna(axis=0, inplace=True)
-        self.val.dropna(axis=0, inplace=True)
-        self.test.dropna(axis=0, inplace=True)
+        train_split_perc = 0.6
+        val_split_perc = 0.8
+        train_split = int(train_split_perc * self.df.shape[0])
+        val_split = int(val_split_perc * self.df.shape[0])
+        self.X_train = self.df.iloc[:train_split,:].copy()
+        self.X_val = self.df.iloc[:val_split,:].copy()
+        self.X_test = self.df.iloc[:,:].copy()
+
+        # self.train.dropna(axis=0, inplace=True)
+        # self.val.dropna(axis=0, inplace=True)
+        # self.test.dropna(axis=0, inplace=True)
 
         # self.train = self.train[~np.all(np.isnan(self.train),1)]
         # self.val = self.val[~np.all(np.isnan(self.val),1)]
         # self.test = self.test[~np.all(np.isnan(self.test),1)]
-        # train_split_perc = 0.7
-        # train_split = int(train_split_perc * self.df.shape[0])
-
-        # self.train = self.df.iloc[:train_split,:].copy()
-        # self.test = self.df.iloc[train_split:,:].copy()
-        self.X_train = self.train.loc[:, ~np.isin(self.train.columns.get_level_values(1), ['Open'])]
-        self.X_val = self.val.loc[:, ~np.isin(self.val.columns.get_level_values(1), ['Open'])]
-        self.X_test = self.test.loc[:, ~np.isin(self.test.columns.get_level_values(1), ['Open'])]
-        self.y_train = self.train.loc[:,(slice(None),'Open')]/self.train.loc[:,(slice(None),'Open')].iloc[0]*10000
-        self.y_val = self.val.loc[:,(slice(None),'Open')]/self.val.loc[:,(slice(None),'Open')].iloc[0]*10000
-        self.y_test = self.test.loc[:,(slice(None),'Open')]/self.test.loc[:,(slice(None),'Open')].iloc[0]*10000
+        
+        # self.X_train = self.train.loc[:, ~np.isin(self.train.columns.get_level_values(1), ['Open'])]
+        # self.X_val = self.val.loc[:, ~np.isin(self.val.columns.get_level_values(1), ['Open'])]
+        # self.X_test = self.test.loc[:, ~np.isin(self.test.columns.get_level_values(1), ['Open'])]
+        self.y_train = self.stock_data.loc[self.X_train.index,(slice(None),'Open')]/self.stock_data.loc[self.X_train.index,(slice(None),'Open')].iloc[0]*10000
+        self.y_val = self.stock_data.loc[self.X_val.index,(slice(None),'Open')]/self.stock_data.loc[self.X_val.index,(slice(None),'Open')].iloc[0]*10000
+        self.y_test = self.stock_data.loc[self.X_test.index,(slice(None),'Open')]/self.stock_data.loc[self.X_test.index,(slice(None),'Open')].iloc[0]*10000

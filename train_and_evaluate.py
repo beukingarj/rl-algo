@@ -31,11 +31,11 @@ class train_and_evaluate():
             model = None
         return model
 
-    def train(self, total_timesteps=100000, cont=True, **kwargs):
+    def train(self, total_timesteps, cont, model_params):
         if cont:
-            model = self.load_best_model(**kwargs)
+            model = self.load_best_model(model_params)
         else:
-            model = self.type_models(**kwargs)
+            model = self.set_model(model_params)
 
         model.set_env(self.env_train_norm)
 
@@ -48,7 +48,7 @@ class train_and_evaluate():
         #     deterministic=True)
 
         callback = SaveOnBestTrainingRewardCallback(check_freq=500, log_dir=self.log_dir, DummyEnv_train=self.DummyEnv_train, DummyEnv_val=self.DummyEnv_val, data=self.data)
-        model.learn(total_timesteps=total_timesteps, callback=callback)
+        model.learn(total_timesteps=total_timesteps)
 
         return model
 
@@ -84,24 +84,19 @@ class train_and_evaluate():
 
         return total_reward, info
 
-    def type_models(self, **kwargs):
+    def set_model(self, model_params):
+        model_params.update(dict(
+            policy = 'MlpPolicy', # MlpLstmPolicy
+            env = self.env_train_norm,
+            verbose=0,
+            # lr_schedule='linear_schedule',
+            tensorboard_log="./logs/tensorboard",
+        ))
+
         if self.model_type=='A2C':
-            # MlpLstmPolicy
-            model = A2C(
-                    'MlpPolicy', 
-                    self.env_train_norm,
-                    verbose=0,
-                    # lr_schedule='constant',
-                    tensorboard_log="./logs/tensorboard",
-                    **kwargs)
+            model = A2C(**model_params)
 
         elif self.model_type=='DQN':
-            model = DQN(
-                    'MlpPolicy', 
-                    self.env_train_norm,
-                    verbose=0,
-                    # lr_schedule='constant',
-                    tensorboard_log="./logs/tensorboard",
-                    **kwargs)
+            model = DQN(**model_params)
 
         return model
