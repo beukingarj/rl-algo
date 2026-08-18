@@ -2,7 +2,7 @@ ipykernel
 stable-baselines3
 ta
 yfinance
-sklearn
+scikit-learn
 scikit-image
 gym
 pandas

@@ -52,10 +52,15 @@ Getrainde modellen en genormaliseerde environments worden weggeschreven naar
 
 ## CI / GitHub Actions
 
-Er zijn momenteel geen GitHub Actions workflows in deze repo (geen
-`.github/workflows/`-map) en dus ook geen runners — noch GitHub-hosted, noch
-self-hosted — actief voor dit project. Tests en checks draaien nu alleen
-lokaal.
+Deze repo heeft een minimale CI-pipeline in `.github/workflows/ci.yml`, die
+draait op GitHub-hosted runners (`ubuntu-latest`, geen eigen infrastructuur
+nodig). Bij elke push naar `main`, elke pull request en handmatig
+(`workflow_dispatch`) installeert hij `requirements.txt` en compileert alle
+`.py`-bestanden (`python -m py_compile`) als snelle syntax-/importcheck.
+
+Er zijn nog geen geautomatiseerde tests (zie `.claude/agents/README.md` voor
+de AI-squad die dit kan uitbreiden); voeg `pytest` en een `tests/`-map toe
+en breid de workflow uit zodra er testbare logica is.
 
 ## AI Squad
 
