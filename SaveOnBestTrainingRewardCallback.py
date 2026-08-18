@@ -32,7 +32,6 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         self.reward_train_list = list()
         self.reward_val_list = list()
         self.num_timesteps_list = list()
-        print("asd")
 
     def _init_callback(self) -> None:
         if exists(self.best_model_path) and exists(self.best_env_path):
