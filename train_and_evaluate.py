@@ -19,6 +19,9 @@ class train_and_evaluate():
         self.env_train_norm = VecMonitor(VecNormalize(self.DummyEnv_train, norm_obs=True, norm_reward=False, clip_obs=10.))
         self.env_val = TradingEnv(X=data.X_val, y=data.y_val)
         self.DummyEnv_val = DummyVecEnv([lambda: self.env_val])
+        self.env_test = TradingEnv(X=data.X_test, y=data.y_test)
+        self.DummyEnv_test = DummyVecEnv([lambda: self.env_test])
+        self.env_test_norm = VecMonitor(VecNormalize(self.DummyEnv_test, norm_obs=True, norm_reward=False, clip_obs=10.))
         self.data = data
 
     def load_best_model(self, **kwargs):
@@ -53,10 +56,10 @@ class train_and_evaluate():
         return model
 
     def evaluate(self, model=None, dataset='test', verbose=1):
-        if model==None:
+        if model is None:
             model = self.load_best_model()
 
-        if model == None:
+        if model is None:
             total_reward = 0
             info = [dict()]
         else:
